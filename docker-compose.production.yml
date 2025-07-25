@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Neo4j Database - Shared between both servers
   neo4j:
