@@ -19,15 +19,8 @@ async def wait_for_neo4j(uri: str, max_retries: int = 30, retry_delay: float = 2
     import socket
     
     # Extract host and port from URI
-    if uri.startswith('bolt://'):
-        uri = uri[6:]  # Remove 'bolt://'
-    
-    if ':' in uri:
-        host, port_str = uri.split(':', 1)
-        port = int(port_str)
-    else:
-        host = uri
-        port = 7687
+    host = uri.split('//')[-1].split(':')[0]
+    port = int(uri.split(':')[-1])
     
     logger.info(f"Waiting for Neo4j at {host}:{port}")
     

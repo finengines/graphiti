@@ -568,6 +568,11 @@ mcp = FastMCP(
     instructions=GRAPHITI_MCP_INSTRUCTIONS,
 )
 
+@mcp.app.get("/healthcheck")
+async def healthcheck():
+    """Health check endpoint for the MCP server."""
+    return {"status": "ok"}
+
 # Initialize Graphiti client
 graphiti_client: Graphiti | None = None
 
