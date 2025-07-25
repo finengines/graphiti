@@ -80,21 +80,11 @@ restart_neo4j() {
         --restart unless-stopped \
         --memory=2g \
         --cpus=1.0 \
-        neo4j:5.26.2 \
-        --env NEO4J_AUTH=neo4j/your_secure_password \
-        --env NEO4J_server_memory_heap_initial__size=512m \
-        --env NEO4J_server_memory_heap_max__size=1G \
-        --env NEO4J_server_memory_pagecache_size=512m \
-        --env NEO4J_server_default__listen__address=0.0.0.0 \
-        --env NEO4J_server_bolt_listen__address=0.0.0.0:7687 \
-        --env NEO4J_server_http_listen__address=0.0.0.0:7474 \
-        --env NEO4J_server_bolt_connection_pool_max_size=50 \
-        --env NEO4J_server_bolt_connection_pool_min_size=5 \
-        --env NEO4J_server_bolt_connection_timeout=30s \
-        --env NEO4J_server_bolt_connection_keep_alive=true \
-        --env NEO4J_server_logs_default_level=INFO \
-        --env NEO4J_server_logs_http_enabled=true \
-        --env NEO4J_server_logs_bolt_enabled=true
+        -e NEO4J_AUTH=neo4j/your_secure_password \
+        -e NEO4J_server_memory_heap_initial__size=512m \
+        -e NEO4J_server_memory_heap_max__size=1G \
+        -e NEO4J_server_memory_pagecache_size=512m \
+        neo4j:5.26.2
     
     print_success "Neo4j restarted with optimized settings"
 }
