@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
@@ -91,12 +92,29 @@ async def get_graphiti(settings: ZepEnvDep):
 
 
 async def initialize_graphiti(settings: ZepEnvDep):
-    client = ZepGraphiti(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password,
-    )
-    await client.build_indices_and_constraints()
+    """Initialize Graphiti with retry logic for Neo4j connection"""
+    max_retries = 30
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Attempting to connect to Neo4j (attempt {attempt + 1}/{max_retries})")
+            client = ZepGraphiti(
+                uri=settings.neo4j_uri,
+                user=settings.neo4j_user,
+                password=settings.neo4j_password,
+            )
+            await client.build_indices_and_constraints()
+            logger.info("Successfully connected to Neo4j and built indices")
+            return
+        except Exception as e:
+            logger.warning(f"Failed to connect to Neo4j (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 1.5, 10)  # Exponential backoff with max 10s
+            else:
+                logger.error("Failed to connect to Neo4j after all retries")
+                raise
 
 
 def get_fact_result_from_edge(edge: EntityEdge):

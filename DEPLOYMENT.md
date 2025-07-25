@@ -1,408 +1,195 @@
-# Graphiti Production Deployment Guide
+# Graphiti Deployment Guide for Dokploy
 
-This guide explains how to deploy the Graphiti knowledge server and MCP server on your personal server using Docker. The deployment includes both servers alongside a Neo4j database, with optional Nginx reverse proxy for unified access.
+## Overview
 
-## Architecture Overview
-
-The deployment consists of the following components:
-
-- **Neo4j Database** (port 7474/7687) - Shared graph database
-- **Graphiti Knowledge Server** (port 8000) - REST API for knowledge graph operations
-- **Graphiti MCP Server** (port 8001) - Model Context Protocol server for AI assistants
-- **Nginx Reverse Proxy** (port 80/443) - Optional unified access point
+This guide covers deploying Graphiti Knowledge Server on Dokploy platform with proper configuration and troubleshooting.
 
 ## Prerequisites
 
-1. **Docker and Docker Compose** installed on your server
-2. **OpenAI API Key** for LLM operations
-3. **Domain name** (optional, for SSL certificates)
-4. **Server with at least 4GB RAM** (recommended 8GB+)
+- Dokploy account and project setup
+- OpenAI API key
+- Docker and Docker Compose knowledge
 
-## Quick Start
+## Quick Deployment
 
-### 1. Clone and Setup
+### 1. Environment Configuration
 
-```bash
-# Clone the repository (if not already done)
-git clone https://github.com/getzep/graphiti.git
-cd graphiti
-
-# Make deployment script executable
-chmod +x deploy.sh
-```
-
-### 2. Configure Environment
+Create a `.env` file in your project root with the following variables:
 
 ```bash
-# Copy environment template
-cp env.example .env
+# Required: OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key_here
 
-# Edit the .env file with your configuration
-nano .env
+# Neo4j Database Configuration
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=your_secure_password_here
+
+# LLM Model Configuration
+MODEL_NAME=gpt-4o-mini
+SMALL_MODEL_NAME=gpt-4o-mini
+EMBEDDING_MODEL_NAME=text-embedding-3-small
+LLM_TEMPERATURE=0.0
+
+# Performance Configuration
+SEMAPHORE_LIMIT=10
 ```
 
-**Required Configuration:**
-- `OPENAI_API_KEY` - Your OpenAI API key
-- `NEO4J_PASSWORD` - Secure password for Neo4j database
+### 2. Deployment Steps
 
-**Optional Configuration:**
-- `MODEL_NAME` - LLM model to use (default: gpt-4o-mini)
-- `SEMAPHORE_LIMIT` - Concurrency limit (default: 10)
+1. **Upload your code** to Dokploy
+2. **Set environment variables** in Dokploy dashboard
+3. **Use the docker-compose.dokploy.yml** file
+4. **Deploy the stack**
 
-### 3. Deploy Services
+### 3. Service Architecture
 
-```bash
-# Deploy all services
-./deploy.sh deploy
+The deployment includes three services:
 
-# Or manually with Docker Compose
-docker compose -f docker-compose.production.yml up -d --build
-```
-
-### 4. Verify Deployment
-
-```bash
-# Check service status
-./deploy.sh status
-
-# Check service health
-./deploy.sh health
-
-# View logs
-./deploy.sh logs
-```
-
-## Service Endpoints
-
-Once deployed, the following endpoints will be available:
-
-### Direct Access
-- **Neo4j Browser**: http://your-server:7474
-- **Graphiti Knowledge Server**: http://your-server:8000
-- **Graphiti MCP Server**: http://your-server:8001
-
-### API Documentation
-- **Graphiti API Docs**: http://your-server:8000/docs
-- **Graphiti ReDoc**: http://your-server:8000/redoc
-
-### Health Checks
-- **Knowledge Server Health**: http://your-server:8000/healthcheck
-- **MCP Server Health**: http://your-server:8001/healthcheck
-
-## Configuration Options
-
-### Environment Variables
-
-The deployment uses the following environment variables (configured in `.env`):
-
-#### Required
-- `OPENAI_API_KEY` - Your OpenAI API key
-- `NEO4J_PASSWORD` - Secure Neo4j password
-
-#### Optional
-- `MODEL_NAME` - Primary LLM model (default: gpt-4o-mini)
-- `SMALL_MODEL_NAME` - Small LLM model (default: gpt-4o-mini)
-- `EMBEDDING_MODEL_NAME` - Embedding model (default: text-embedding-3-small)
-- `LLM_TEMPERATURE` - LLM temperature (0.0-2.0, default: 0.0)
-- `SEMAPHORE_LIMIT` - Concurrency limit (default: 10)
-- `OPENAI_BASE_URL` - Custom OpenAI endpoint (for Azure, etc.)
-
-### Neo4j Configuration
-
-The Neo4j database is configured with:
-- **Memory**: 2GB heap, 1GB page cache
-- **Authentication**: Username `neo4j`, password from environment
-- **Ports**: 7474 (HTTP), 7687 (Bolt)
-
-### Performance Tuning
-
-For production deployments, consider:
-
-1. **Increase Neo4j memory** if you have large graphs:
-   ```yaml
-   environment:
-     - NEO4J_server_memory_heap_max__size=4G
-     - NEO4J_server_memory_pagecache_size=2G
-   ```
-
-2. **Adjust concurrency** based on your OpenAI rate limits:
-   ```bash
-   SEMAPHORE_LIMIT=5  # Lower for rate-limited accounts
-   ```
-
-3. **Use persistent volumes** for data persistence:
-   ```yaml
-   volumes:
-     - /path/to/neo4j/data:/data
-     - /path/to/neo4j/logs:/logs
-   ```
-
-## SSL/HTTPS Configuration
-
-### Option 1: Let's Encrypt (Recommended)
-
-1. Install Certbot:
-   ```bash
-   sudo apt-get update
-   sudo apt-get install certbot
-   ```
-
-2. Generate certificates:
-   ```bash
-   sudo certbot certonly --standalone -d your-domain.com
-   ```
-
-3. Update Nginx configuration:
-   ```nginx
-   ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-   ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-   ```
-
-### Option 2: Self-Signed Certificates
-
-For testing, you can generate self-signed certificates:
-
-```bash
-# Create SSL directory
-mkdir -p nginx/ssl
-
-# Generate self-signed certificate
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx/ssl/key.pem \
-  -out nginx/ssl/cert.pem \
-  -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-```
-
-## Monitoring and Maintenance
-
-### Health Monitoring
-
-The deployment includes health checks for all services:
-
-```bash
-# Check all services
-./deploy.sh health
-
-# Individual service checks
-curl http://localhost:8000/healthcheck
-curl http://localhost:8001/healthcheck
-```
-
-### Log Management
-
-```bash
-# View all logs
-./deploy.sh logs
-
-# View specific service logs
-docker compose -f docker-compose.production.yml logs graphiti-server
-docker compose -f docker-compose.production.yml logs graphiti-mcp
-```
-
-### Backup and Recovery
-
-#### Neo4j Backup
-
-```bash
-# Create backup
-docker exec graphiti-neo4j neo4j-admin dump --database=neo4j --to=/backups/
-
-# Restore backup
-docker exec graphiti-neo4j neo4j-admin load --from=/backups/neo4j.dump --database=neo4j --force
-```
-
-#### Volume Backup
-
-```bash
-# Backup Neo4j data
-docker run --rm -v graphiti_neo4j_data:/data -v $(pwd):/backup alpine tar czf /backup/neo4j-backup.tar.gz -C /data .
-
-# Restore Neo4j data
-docker run --rm -v graphiti_neo4j_data:/data -v $(pwd):/backup alpine tar xzf /backup/neo4j-backup.tar.gz -C /data
-```
+- **Neo4j Database**: Graph database backend
+- **Graphiti Knowledge Server**: REST API server (port 8000)
+- **Graphiti MCP Server**: Model Context Protocol server (port 8001)
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. Services Not Starting
+#### 1. Neo4j Connection Failures
 
-```bash
-# Check service status
-./deploy.sh status
-
-# View detailed logs
-./deploy.sh logs
-
-# Check Docker resources
-docker system df
-docker stats
+**Symptoms:**
+```
+Transaction failed and will be retried in 1.182745825845585s (Couldn't connect to neo4j:7687
 ```
 
-#### 2. OpenAI Rate Limits
+**Solutions:**
+- Ensure Neo4j container is healthy before starting other services
+- Check that `NEO4J_URI=bolt://neo4j:7687` is set correctly
+- Verify Neo4j credentials in environment variables
+- Wait for Neo4j to fully initialize (can take 2-3 minutes)
 
-If you encounter 429 errors, reduce concurrency:
+#### 2. 404 Errors on Root Path
 
-```bash
-# Edit .env file
-SEMAPHORE_LIMIT=5
-
-# Restart services
-docker compose -f docker-compose.production.yml restart graphiti-server graphiti-mcp
+**Symptoms:**
+```
+INFO: 10.0.1.57:60038 - "GET / HTTP/1.1" 404 Not Found
 ```
 
-#### 3. Neo4j Connection Issues
+**Solutions:**
+- The server now includes a root endpoint that returns API information
+- Check that the server is running on port 8000
+- Verify health check endpoint at `/healthcheck`
 
-```bash
-# Check Neo4j logs
-docker compose -f docker-compose.production.yml logs neo4j
+#### 3. Health Check Failures
 
-# Test Neo4j connection
-curl http://localhost:7474
+**Symptoms:**
+- Container restarting repeatedly
+- Health check timeouts
 
-# Reset Neo4j password if needed
-docker exec graphiti-neo4j neo4j-admin set-initial-password newpassword
-```
+**Solutions:**
+- Increase health check start period (now set to 60s)
+- Check logs for specific error messages
+- Verify all environment variables are set correctly
 
-#### 4. Memory Issues
+### Debugging Steps
 
-If services are running out of memory:
-
-```bash
-# Check memory usage
-docker stats
-
-# Increase Neo4j memory in docker-compose.production.yml
-environment:
-  - NEO4J_server_memory_heap_max__size=4G
-```
-
-### Performance Optimization
-
-1. **Database Optimization**:
-   - Create indexes for frequently queried properties
-   - Monitor query performance in Neo4j Browser
-
-2. **API Optimization**:
-   - Use pagination for large result sets
-   - Implement caching for frequently accessed data
-
-3. **Resource Monitoring**:
+1. **Check container logs:**
    ```bash
-   # Monitor resource usage
-   docker stats
-   
-   # Monitor disk usage
-   docker system df
+   docker logs graphiti-knowledge-server
+   docker logs neo4j
    ```
+
+2. **Verify Neo4j is running:**
+   ```bash
+   docker exec neo4j cypher-shell -u neo4j -p your_password
+   ```
+
+3. **Test API endpoints:**
+   ```bash
+   curl http://localhost:8000/
+   curl http://localhost:8000/healthcheck
+   ```
+
+4. **Check network connectivity:**
+   ```bash
+   docker exec graphiti-knowledge-server ping neo4j
+   ```
+
+## Configuration Details
+
+### Neo4j Configuration
+
+- **Memory settings**: Optimized for Dokploy (1GB heap, 512MB page cache)
+- **Bolt protocol**: Enabled on port 7687
+- **HTTP interface**: Available on port 7474 for browser access
+- **Authentication**: Uses environment variables for username/password
+
+### Server Configuration
+
+- **Startup retry logic**: Automatically retries Neo4j connection up to 30 times
+- **Health checks**: Improved health check scripts
+- **Resource limits**: 1GB memory, 0.5 CPU cores per service
+- **Logging**: Structured logging with proper error reporting
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key (required) | - |
+| `NEO4J_USER` | Neo4j username | neo4j |
+| `NEO4J_PASSWORD` | Neo4j password | your_secure_password |
+| `MODEL_NAME` | Primary LLM model | gpt-4o-mini |
+| `EMBEDDING_MODEL_NAME` | Embedding model | text-embedding-3-small |
+| `SEMAPHORE_LIMIT` | Concurrency limit | 10 |
+
+## API Endpoints
+
+- `GET /` - Server information and available endpoints
+- `GET /healthcheck` - Health check endpoint
+- `POST /ingest/` - Ingest data into knowledge graph
+- `GET /retrieve/` - Retrieve information from knowledge graph
+
+## Monitoring
+
+### Health Checks
+
+- **Neo4j**: HTTP endpoint on port 7474
+- **Graphiti Server**: Custom health check script
+- **MCP Server**: HTTP health check on port 8000
+
+### Logs
+
+- All services log to stdout/stderr
+- Logs are available in Dokploy dashboard
+- Structured logging with timestamps and log levels
+
+## Performance Tuning
+
+### Memory Settings
+
+- **Neo4j**: 1GB heap, 512MB page cache
+- **Graphiti Server**: 1GB memory limit
+- **MCP Server**: 1GB memory limit
+
+### Concurrency
+
+- **SEMAPHORE_LIMIT**: Controls concurrent operations (default: 10)
+- Adjust based on your OpenAI rate limits and server capacity
 
 ## Security Considerations
 
-### Network Security
+1. **Change default passwords** for Neo4j
+2. **Use secure API keys** for OpenAI
+3. **Limit network access** to necessary ports only
+4. **Monitor logs** for suspicious activity
+5. **Regular updates** of base images
 
-1. **Firewall Configuration**:
-   ```bash
-   # Allow only necessary ports
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
-   sudo ufw allow 7474/tcp  # Only if external Neo4j access needed
-   ```
+## Support
 
-2. **VPN Access** (Recommended):
-   - Restrict Neo4j access to VPN only
-   - Use internal network for service communication
+For issues specific to this deployment:
 
-### Data Security
+1. Check the logs for error messages
+2. Verify environment variables are set correctly
+3. Ensure Neo4j is healthy before other services start
+4. Test connectivity between services
+5. Review the troubleshooting section above
 
-1. **Environment Variables**:
-   - Never commit `.env` files to version control
-   - Use secure password generation for Neo4j
-
-2. **SSL/TLS**:
-   - Always use HTTPS in production
-   - Regularly update SSL certificates
-
-3. **Backup Security**:
-   - Encrypt backup files
-   - Store backups in secure location
-
-## Integration with Dokploy
-
-This deployment is compatible with Dokploy (D-O-K-P-L-O-Y). The Docker Compose configuration follows standard practices and can be integrated into your Dokploy workflow.
-
-### Dokploy Integration Steps
-
-1. **Add to Dokploy Configuration**:
-   ```yaml
-   services:
-     graphiti:
-       dockerfile: Dockerfile
-       ports:
-         - "8000:8000"
-       environment:
-         - OPENAI_API_KEY=${OPENAI_API_KEY}
-         - NEO4J_URI=bolt://neo4j:7687
-         - NEO4J_USER=${NEO4J_USER}
-         - NEO4J_PASSWORD=${NEO4J_PASSWORD}
-   ```
-
-2. **Environment Management**:
-   - Use Dokploy's environment variable management
-   - Configure secrets for API keys and passwords
-
-3. **Health Checks**:
-   - Configure Dokploy health checks using the `/healthcheck` endpoints
-   - Set appropriate timeout and retry values
-
-## API Usage Examples
-
-### Graphiti Knowledge Server
-
-```bash
-# Add episode to knowledge graph
-curl -X POST "http://localhost:8000/ingest/episode" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Meeting Notes",
-    "episode_body": "Discussed project timeline and requirements",
-    "source": "text"
-  }'
-
-# Search for nodes
-curl -X POST "http://localhost:8000/retrieve/search/nodes" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "project timeline",
-    "max_nodes": 10
-  }'
-```
-
-### Graphiti MCP Server
-
-The MCP server is designed for integration with AI assistants like Claude Desktop or Cursor. Configure your MCP client to connect to:
-
-```
-http://localhost:8001/sse
-```
-
-## Support and Updates
-
-### Updating Services
-
-```bash
-# Pull latest changes
-git pull origin main
-
-# Rebuild and restart services
-docker compose -f docker-compose.production.yml up -d --build
-```
-
-### Getting Help
-
-- **Documentation**: Check the main Graphiti README
-- **Issues**: Report issues on the GitHub repository
-- **Community**: Join the Graphiti community discussions
-
-## License
-
-This deployment configuration follows the same license as the Graphiti project. 
+For Graphiti-specific issues, refer to the main documentation and GitHub repository. 

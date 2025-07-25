@@ -24,6 +24,19 @@ app.include_router(retrieve.router)
 app.include_router(ingest.router)
 
 
+@app.get('/')
+async def root():
+    return JSONResponse(content={
+        'message': 'Graphiti Knowledge Server',
+        'version': '1.0.0',
+        'endpoints': {
+            'healthcheck': '/healthcheck',
+            'ingest': '/ingest',
+            'retrieve': '/retrieve'
+        }
+    }, status_code=200)
+
+
 @app.get('/healthcheck')
 async def healthcheck():
     return JSONResponse(content={'status': 'healthy'}, status_code=200)

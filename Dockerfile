@@ -83,5 +83,5 @@ USER app
 ENV PORT=8000
 EXPOSE $PORT
 
-# Use uv run for execution
-CMD ["uv", "run", "uvicorn", "graph_service.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use the startup script for better initialization
+CMD ["uv", "run", "graph_service.startup:main"]
