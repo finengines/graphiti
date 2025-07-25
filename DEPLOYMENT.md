@@ -109,7 +109,7 @@ INFO: 10.0.1.57:60038 - "GET / HTTP/1.1" 404 Not Found
    ```
 
 4. **Check network connectivity:**
-   ```bash
+```bash
    docker exec graphiti-knowledge-server ping neo4j
    ```
 

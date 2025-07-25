@@ -568,7 +568,7 @@ mcp = FastMCP(
     instructions=GRAPHITI_MCP_INSTRUCTIONS,
 )
 
-@mcp.app.get("/healthcheck")
+@mcp.get("/healthcheck")
 async def healthcheck():
     """Health check endpoint for the MCP server."""
     return {"status": "ok"}
