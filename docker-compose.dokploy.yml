@@ -2,7 +2,7 @@ services:
   # Neo4j Database - Shared between both servers
   neo4j:
     image: neo4j:5.26.2
-    container_name: graphiti-neo4j
+    container_name: neo4j
     restart: unless-stopped
     healthcheck:
       test:
